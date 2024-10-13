@@ -14,7 +14,7 @@ func start_websocket() (chan os.Signal, chan []byte, chan []byte, chan struct{})
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
 
-	u := url.URL{Scheme: "ws", Host: os.Getenv("AP_HOST"), Path: ""}
+	u := url.URL{Scheme: "wss", Host: os.Getenv("AP_HOST"), Path: ""}
 	log.Printf("connecting to %s", u.String())
 
 	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)

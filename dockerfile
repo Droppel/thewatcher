@@ -1,4 +1,4 @@
-FROM golang:1.19-alpine AS builder
+FROM golang:1.23-alpine AS builder
 
 # git is required to fetch go dependencies
 RUN apk add --no-cache ca-certificates git
@@ -38,6 +38,7 @@ RUN cp /build/watcher .
 FROM scratch
 
 COPY --from=builder /dist/watcher /
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
 # Command to run
 ENTRYPOINT ["/watcher"]

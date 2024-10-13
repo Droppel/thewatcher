@@ -69,7 +69,7 @@ type Player struct {
 
 var roomInfo RoomInfo
 var IdMaps IdMap
-var players []Player
+var players map[int]Player
 var discordMessageCh chan discordbot.DiscordMessage
 
 func Connect(discMessageCh chan discordbot.DiscordMessage) {
@@ -118,7 +118,7 @@ func Connect(discMessageCh chan discordbot.DiscordMessage) {
 
 					sender <- connectPacketBytes
 				case "Connected":
-					players = make([]Player, 0)
+					players = make(map[int]Player, 0)
 					playerdata := message["players"].([]interface{})
 					for _, player := range playerdata {
 						var playerData Player
@@ -127,7 +127,7 @@ func Connect(discMessageCh chan discordbot.DiscordMessage) {
 							log.Println("json:", err)
 							return
 						}
-						players = append(players, playerData)
+						players[playerData.Slot] = playerData
 					}
 					games := strings.Join(roomInfo.Games, `","`)
 					sender <- []byte(fmt.Sprintf(`[{"cmd":"GetDataPackage","games":["%s"]}]`, games))
@@ -196,8 +196,9 @@ func HandlePrintJson(m []byte) {
 
 	log.Println("Item:", item.Item)
 
+	recvPlayer := result["receiving"].(float64)
 	discordMessageCh <- discordbot.DiscordMessage{
-		SlotName: players[item.Player].Name,
+		SlotName: players[int(recvPlayer)].Name,
 		Slot:     item.Player,
 		Item:     IdMaps.Item_id_to_name[item.Item],
 	}
