@@ -2,8 +2,15 @@ package main
 
 import (
 	"watcher/archipelago"
+	"watcher/discordbot"
 )
 
 func main() {
-	archipelago.Connect()
+	err, messageCh := discordbot.InitBot()
+	if err != nil {
+		panic(err)
+	}
+
+	archipelago.Connect(messageCh)
+
 }
