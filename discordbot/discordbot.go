@@ -18,8 +18,9 @@ var (
 )
 
 type DiscordMessage struct {
-	Slot int
-	Item string
+	Slot     int
+	SlotName string
+	Item     string
 }
 
 func InitBot() (error, chan DiscordMessage) {
@@ -57,7 +58,7 @@ func InitBot() (error, chan DiscordMessage) {
 			select {
 			case itemrec := <-messageCh:
 				// Handle message
-				message := fmt.Sprintf("Received %s", itemrec.Item)
+				message := fmt.Sprintf("%s received %s", itemrec.SlotName, itemrec.Item)
 
 				dg.ChannelMessageSend(slotsToChannels[itemrec.Slot], message)
 			case <-sc:

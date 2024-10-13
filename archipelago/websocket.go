@@ -10,7 +10,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-func start_websocket() (chan os.Signal, chan []byte, chan []byte) {
+func start_websocket() (chan os.Signal, chan []byte, chan []byte, chan struct{}) {
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
 
@@ -18,9 +18,12 @@ func start_websocket() (chan os.Signal, chan []byte, chan []byte) {
 	log.Printf("connecting to %s", u.String())
 
 	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
-	if err != nil {
-		log.Fatal("dial:", err)
+	for err != nil {
+		log.Println("dial:", err)
+		time.Sleep(5 * time.Second)
+		c, _, err = websocket.DefaultDialer.Dial(u.String(), nil)
 	}
+	log.Println("connected")
 
 	done := make(chan struct{})
 
@@ -69,5 +72,5 @@ func start_websocket() (chan os.Signal, chan []byte, chan []byte) {
 			}
 		}
 	}()
-	return interrupt, sender, messages
+	return interrupt, sender, messages, done
 }

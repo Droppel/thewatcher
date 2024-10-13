@@ -62,81 +62,103 @@ type ConnectPacket struct {
 	Slot_data      bool     `json:"slot_data"`
 }
 
+type Player struct {
+	Slot int    `json:"slot"`
+	Name string `json:"name"`
+}
+
 var roomInfo RoomInfo
 var IdMaps IdMap
+var players []Player
 var discordMessageCh chan discordbot.DiscordMessage
 
 func Connect(discMessageCh chan discordbot.DiscordMessage) {
 	discordMessageCh = discMessageCh
 
 	var messagesCh chan []byte
-	_, sender, messagesCh := start_websocket()
+	_, sender, messagesCh, done := start_websocket()
 
-	for m := range messagesCh {
-		// Parse the message
-		messages := []Message{}
-		err := json.Unmarshal(m, &messages)
-		if err != nil {
-			log.Println("json:", err)
-			return
-		}
-		for _, message := range messages {
-			cmd := message["cmd"]
-			messageBytes, err := json.Marshal(message)
+	for {
+		select {
+		case m := <-messagesCh:
+			// Parse the message
+			messages := []Message{}
+			err := json.Unmarshal(m, &messages)
 			if err != nil {
 				log.Println("json:", err)
 				return
 			}
-			switch cmd {
-			case "RoomInfo":
-				HandleRoomInfo(messageBytes)
-
-				connectPacket := ConnectPacket{
-					Cmd:            "Connect",
-					Password:       "",
-					Game:           "",
-					Name:           os.Getenv("ARCHIPELAGO_NAME"),
-					Uuid:           uuid.New().String(),
-					Version:        roomInfo.Version,
-					Items_handling: 0b111,
-					Tags:           []string{"TextOnly"},
-					Slot_data:      false,
-				}
-				connectPacketBytes, err := json.Marshal([]ConnectPacket{connectPacket})
+			for _, message := range messages {
+				cmd := message["cmd"]
+				messageBytes, err := json.Marshal(message)
 				if err != nil {
 					log.Println("json:", err)
 					return
 				}
+				switch cmd {
+				case "RoomInfo":
+					HandleRoomInfo(messageBytes)
 
-				sender <- connectPacketBytes
-			case "Connected":
-				games := strings.Join(roomInfo.Games, `","`)
-				sender <- []byte(fmt.Sprintf(`[{"cmd":"GetDataPackage","games":["%s"]}]`, games))
-			case "DataPackage":
-				data := message["data"].(map[string]interface{})["games"].(map[string]interface{})
-				IdMaps = IdMap{
-					Item_id_to_name:     make(map[int]string),
-					Location_id_to_name: make(map[int]string),
-				}
-				for _, game := range data {
-					var gameData Game
-					err = mapstructure.Decode(game, &gameData)
+					connectPacket := ConnectPacket{
+						Cmd:            "Connect",
+						Password:       "",
+						Game:           "",
+						Name:           os.Getenv("ARCHIPELAGO_NAME"),
+						Uuid:           uuid.New().String(),
+						Version:        roomInfo.Version,
+						Items_handling: 0b111,
+						Tags:           []string{"TextOnly"},
+						Slot_data:      false,
+					}
+					connectPacketBytes, err := json.Marshal([]ConnectPacket{connectPacket})
 					if err != nil {
 						log.Println("json:", err)
 						return
 					}
-					for name, id := range gameData.Item_name_to_id {
-						IdMaps.Item_id_to_name[id] = name
+
+					sender <- connectPacketBytes
+				case "Connected":
+					players = make([]Player, 0)
+					playerdata := message["players"].([]interface{})
+					for _, player := range playerdata {
+						var playerData Player
+						err = mapstructure.Decode(player, &playerData)
+						if err != nil {
+							log.Println("json:", err)
+							return
+						}
+						players = append(players, playerData)
 					}
-					for name, id := range gameData.Location_name_to_id {
-						IdMaps.Location_id_to_name[id] = name
+					games := strings.Join(roomInfo.Games, `","`)
+					sender <- []byte(fmt.Sprintf(`[{"cmd":"GetDataPackage","games":["%s"]}]`, games))
+				case "DataPackage":
+					data := message["data"].(map[string]interface{})["games"].(map[string]interface{})
+					IdMaps = IdMap{
+						Item_id_to_name:     make(map[int]string),
+						Location_id_to_name: make(map[int]string),
 					}
+					for _, game := range data {
+						var gameData Game
+						err = mapstructure.Decode(game, &gameData)
+						if err != nil {
+							log.Println("json:", err)
+							return
+						}
+						for name, id := range gameData.Item_name_to_id {
+							IdMaps.Item_id_to_name[id] = name
+						}
+						for name, id := range gameData.Location_name_to_id {
+							IdMaps.Location_id_to_name[id] = name
+						}
+					}
+				case "PrintJSON":
+					HandlePrintJson(messageBytes)
+				default:
+					log.Println("unknown message:", cmd)
 				}
-			case "PrintJSON":
-				HandlePrintJson(messageBytes)
-			default:
-				log.Println("unknown message:", cmd)
 			}
+		case <-done:
+			_, sender, messagesCh, done = start_websocket()
 		}
 	}
 }
@@ -175,7 +197,8 @@ func HandlePrintJson(m []byte) {
 	log.Println("Item:", item.Item)
 
 	discordMessageCh <- discordbot.DiscordMessage{
-		Slot: item.Player,
-		Item: IdMaps.Item_id_to_name[item.Item],
+		SlotName: players[item.Player].Name,
+		Slot:     item.Player,
+		Item:     IdMaps.Item_id_to_name[item.Item],
 	}
 }
