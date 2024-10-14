@@ -199,7 +199,7 @@ func HandlePrintJson(m []byte) {
 	recvPlayer := result["receiving"].(float64)
 	discordMessageCh <- discordbot.DiscordMessage{
 		SlotName: players[int(recvPlayer)].Name,
-		Slot:     item.Player,
+		Slot:     int(recvPlayer),
 		Item:     IdMaps.Item_id_to_name[item.Item],
 	}
 }
