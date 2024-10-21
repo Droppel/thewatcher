@@ -1,7 +1,6 @@
 package discordbot
 
 import (
-	"fmt"
 	"os"
 	"os/signal"
 	"strconv"
@@ -18,12 +17,11 @@ var (
 )
 
 type DiscordMessage struct {
-	Slot     int
-	SlotName string
-	Item     string
+	Slot    int
+	Message string
 }
 
-func InitBot() (error, chan DiscordMessage) {
+func InitBot() (chan DiscordMessage, error) {
 	var err error
 	authtoken := os.Getenv("AUTH_TOKEN")
 
@@ -38,13 +36,13 @@ func InitBot() (error, chan DiscordMessage) {
 	// Create a new Discord session using the provided bot token.
 	dg, err = discordgo.New("Bot " + string(authtoken))
 	if err != nil {
-		return err, nil
+		return nil, err
 	}
 
 	// Open a websocket connection to Discord and begin listening.
 	err = dg.Open()
 	if err != nil {
-		return err, nil
+		return nil, err
 	}
 
 	// Wait here until CTRL-C or other term signal is received.
@@ -56,11 +54,10 @@ func InitBot() (error, chan DiscordMessage) {
 	go func() {
 		for {
 			select {
-			case itemrec := <-messageCh:
+			case msg := <-messageCh:
 				// Handle message
-				message := fmt.Sprintf("%s received %s", itemrec.SlotName, itemrec.Item)
 
-				dg.ChannelMessageSend(slotsToChannels[itemrec.Slot], message)
+				dg.ChannelMessageSend(slotsToChannels[msg.Slot], msg.Message)
 			case <-sc:
 				dg.Close()
 				return
@@ -68,5 +65,5 @@ func InitBot() (error, chan DiscordMessage) {
 		}
 	}()
 
-	return nil, messageCh
+	return messageCh, err
 }

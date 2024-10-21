@@ -178,28 +178,69 @@ func HandlePrintJson(m []byte) {
 		log.Println("json:", err)
 		return
 	}
-	if result["type"] != "ItemSend" {
-		return
+	switch result["type"] {
+	case "ItemSend":
+		HandleItemSend(result)
+	case "Join":
+		HandleJoin(result)
+	case "Part":
+		HandlePart(result)
 	}
+}
 
+func HandleItemSend(result map[string]interface{}) {
 	var item Item
-	err = mapstructure.Decode(result["item"], &item)
+	err := mapstructure.Decode(result["item"], &item)
 	if err != nil {
 		log.Println("decode:", err)
 		return
 	}
 
-	log.Println(result["data"])
 	if item.Flags != 1 {
 		return
 	}
 
-	log.Println("Item:", item.Item)
-
 	recvPlayer := result["receiving"].(float64)
+	slotName := players[int(recvPlayer)].Name
+	discMsg := fmt.Sprintf("%s received %s", slotName, IdMaps.Item_id_to_name[item.Item])
 	discordMessageCh <- discordbot.DiscordMessage{
-		SlotName: players[int(recvPlayer)].Name,
-		Slot:     int(recvPlayer),
-		Item:     IdMaps.Item_id_to_name[item.Item],
+		Slot:    int(recvPlayer),
+		Message: discMsg,
 	}
+}
+
+func HandleJoin(result map[string]interface{}) {
+	slot := result["slot"].(float64)
+	slotName := players[int(slot)].Name
+	text := result["data"].([]interface{})[0].(map[string]interface{})["text"].(string)
+
+	if isTextOnly(text) {
+		return
+	}
+
+	discMsg := fmt.Sprintf("%s joined", slotName)
+	discordMessageCh <- discordbot.DiscordMessage{
+		Slot:    int(slot),
+		Message: discMsg,
+	}
+}
+
+func HandlePart(result map[string]interface{}) {
+	slot := result["slot"].(float64)
+	slotName := players[int(slot)].Name
+	text := result["data"].([]interface{})[0].(map[string]interface{})["text"].(string)
+
+	if isTextOnly(text) {
+		return
+	}
+
+	discMsg := fmt.Sprintf("%s left", slotName)
+	discordMessageCh <- discordbot.DiscordMessage{
+		Slot:    int(slot),
+		Message: discMsg,
+	}
+}
+
+func isTextOnly(msg string) bool {
+	return strings.Contains(msg, "TextOnly")
 }

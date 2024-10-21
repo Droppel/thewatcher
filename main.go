@@ -6,7 +6,7 @@ import (
 )
 
 func main() {
-	err, messageCh := discordbot.InitBot()
+	messageCh, err := discordbot.InitBot()
 	if err != nil {
 		panic(err)
 	}
