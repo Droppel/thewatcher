@@ -70,9 +70,9 @@ type Player struct {
 var roomInfo RoomInfo
 var IdMaps IdMap
 var players map[int]Player
-var discordMessageCh chan discordbot.DiscordMessage
+var discordMessageCh chan discordbot.DiscordAction
 
-func Connect(discMessageCh chan discordbot.DiscordMessage) {
+func Connect(discMessageCh chan discordbot.DiscordAction) {
 	discordMessageCh = discMessageCh
 
 	var messagesCh chan []byte
@@ -203,9 +203,20 @@ func HandleItemSend(result map[string]interface{}) {
 	recvPlayer := result["receiving"].(float64)
 	slotName := players[int(recvPlayer)].Name
 	discMsg := fmt.Sprintf("%s received %s", slotName, IdMaps.Item_id_to_name[item.Item])
-	discordMessageCh <- discordbot.DiscordMessage{
-		Slot:    int(recvPlayer),
-		Message: discMsg,
+	discordMessageCh <- discordbot.DiscordAction{
+		Type: "message",
+		Message: discordbot.DiscordMessage{
+			Slot:    int(recvPlayer),
+			Message: discMsg,
+		},
+	}
+
+	discordMessageCh <- discordbot.DiscordAction{
+		Type: "channel_topic",
+		ChannelTopicEdit: discordbot.DiscordChannelTopicEdit{
+			Slot:  int(recvPlayer),
+			Topic: "Game status: ???",
+		},
 	}
 }
 
@@ -219,9 +230,12 @@ func HandleJoin(result map[string]interface{}) {
 	}
 
 	discMsg := fmt.Sprintf("%s joined", slotName)
-	discordMessageCh <- discordbot.DiscordMessage{
-		Slot:    int(slot),
-		Message: discMsg,
+	discordMessageCh <- discordbot.DiscordAction{
+		Type: "message",
+		Message: discordbot.DiscordMessage{
+			Slot:    int(slot),
+			Message: discMsg,
+		},
 	}
 }
 
@@ -235,12 +249,15 @@ func HandlePart(result map[string]interface{}) {
 	}
 
 	discMsg := fmt.Sprintf("%s left", slotName)
-	discordMessageCh <- discordbot.DiscordMessage{
-		Slot:    int(slot),
-		Message: discMsg,
+	discordMessageCh <- discordbot.DiscordAction{
+		Type: "message",
+		Message: discordbot.DiscordMessage{
+			Slot:    int(slot),
+			Message: discMsg,
+		},
 	}
 }
 
 func isTextOnly(msg string) bool {
-	return strings.Contains(msg, "TextOnly")
+	return strings.Contains(msg, "TextOnly") || strings.Contains(msg, "IgnoreGame")
 }

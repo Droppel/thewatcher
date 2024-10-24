@@ -12,5 +12,4 @@ func main() {
 	}
 
 	archipelago.Connect(messageCh)
-
 }
