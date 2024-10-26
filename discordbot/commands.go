@@ -1,6 +1,7 @@
 package discordbot
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/bwmarrin/discordgo"
@@ -19,6 +20,10 @@ var (
 		{
 			Name:        "unblocked",
 			Description: "Sets the game status to unblocked",
+		},
+		{
+			Name:        "bkstatus",
+			Description: "Replies with the current game status",
 		},
 	}
 
@@ -66,6 +71,25 @@ var (
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
 					Content: "Game status set to unblocked",
+				},
+			})
+		},
+		"bkstatus": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+			reply := ""
+			for _, chID := range slotsToChannels {
+				channel, err := s.Channel(chID)
+				if err != nil {
+					log.Println(err)
+					continue
+				}
+				chReply := fmt.Sprintf("%s: %s\n", channel.Name, channel.Topic)
+				reply += chReply
+			}
+
+			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: reply,
 				},
 			})
 		},
