@@ -259,5 +259,5 @@ func HandlePart(result map[string]interface{}) {
 }
 
 func isTextOnly(msg string) bool {
-	return strings.Contains(msg, "TextOnly") || strings.Contains(msg, "IgnoreGame")
+	return strings.Contains(msg, "TextOnly") || strings.Contains(msg, "IgnoreGame") || strings.Contains(msg, "Tracker")
 }
