@@ -15,6 +15,8 @@ import (
 var (
 	dg              *discordgo.Session
 	slotsToChannels map[int]string
+
+	currentGameStatus map[string]string = make(map[string]string)
 )
 
 type DiscordAction struct {
@@ -75,6 +77,15 @@ func InitBot() (chan DiscordAction, error) {
 		fmt.Printf("Added command: %s\n", v.Name)
 	}
 
+	for _, chID := range slotsToChannels {
+		channel, err := dg.Channel(chID)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		currentGameStatus[channel.Name] = channel.Topic
+	}
+
 	// Wait here until CTRL-C or other term signal is received.
 	log.Info("Bot is now running.  Press CTRL-C to exit.")
 	sc := make(chan os.Signal, 1)
@@ -98,6 +109,7 @@ func InitBot() (chan DiscordAction, error) {
 					if !strings.Contains(channel.Topic, "BK") {
 						continue
 					}
+					currentGameStatus[channel.Name] = "Game status: BK"
 					dg.ChannelEdit(slotsToChannels[msg.ChannelTopicEdit.Slot], &discordgo.ChannelEdit{
 						Topic: msg.ChannelTopicEdit.Topic,
 					})

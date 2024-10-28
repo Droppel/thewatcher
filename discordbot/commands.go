@@ -29,7 +29,20 @@ var (
 
 	CommandHandlers = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
 		"bk": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-			_, err := s.ChannelEdit(i.ChannelID, &discordgo.ChannelEdit{
+			channel, err := s.Channel(i.ChannelID)
+			if err != nil {
+				log.Println(err)
+				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Content: "Failed to get channel",
+					},
+				})
+				return
+			}
+
+			currentGameStatus[channel.Name] = "Game status: BK"
+			_, err = s.ChannelEdit(i.ChannelID, &discordgo.ChannelEdit{
 				Topic: "Game status: BK",
 			})
 			if err != nil {
@@ -51,6 +64,19 @@ var (
 			})
 		},
 		"softbk": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+			channel, err := s.Channel(i.ChannelID)
+			if err != nil {
+				log.Println(err)
+				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Content: "Failed to get channel",
+					},
+				})
+				return
+			}
+
+			currentGameStatus[channel.Name] = "Game status: SoftBK"
 			s.ChannelEdit(i.ChannelID, &discordgo.ChannelEdit{
 				Topic: "Game status: SoftBK",
 			})
@@ -63,6 +89,19 @@ var (
 			})
 		},
 		"unblocked": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+			channel, err := s.Channel(i.ChannelID)
+			if err != nil {
+				log.Println(err)
+				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Content: "Failed to get channel",
+					},
+				})
+				return
+			}
+
+			currentGameStatus[channel.Name] = "Game status: unblocked"
 			s.ChannelEdit(i.ChannelID, &discordgo.ChannelEdit{
 				Topic: "Game status: unblocked",
 			})
@@ -76,16 +115,12 @@ var (
 		},
 		"bkstatus": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			reply := ""
-			for _, chID := range slotsToChannels {
-				channel, err := s.Channel(chID)
-				if err != nil {
-					log.Println(err)
-					continue
-				}
-				chReply := fmt.Sprintf("%s: %s\n", channel.Name, channel.Topic)
+			for chName, topic := range currentGameStatus {
+				chReply := fmt.Sprintf("%s: %s\n", chName, topic)
 				reply += chReply
 			}
 
+			log.Println("Replying with:", reply)
 			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
