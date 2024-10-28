@@ -229,12 +229,13 @@ func HandleJoin(result map[string]interface{}) {
 		return
 	}
 
-	discMsg := fmt.Sprintf("@silent %s joined", slotName)
+	discMsg := fmt.Sprintf("%s joined", slotName)
 	discordMessageCh <- discordbot.DiscordAction{
 		Type: "message",
 		Message: discordbot.DiscordMessage{
 			Slot:    int(slot),
 			Message: discMsg,
+			Silent:  true,
 		},
 	}
 }
@@ -248,12 +249,13 @@ func HandlePart(result map[string]interface{}) {
 		return
 	}
 
-	discMsg := fmt.Sprintf("@silent %s left", slotName)
+	discMsg := fmt.Sprintf("%s left", slotName)
 	discordMessageCh <- discordbot.DiscordAction{
 		Type: "message",
 		Message: discordbot.DiscordMessage{
 			Slot:    int(slot),
 			Message: discMsg,
+			Silent:  true,
 		},
 	}
 }

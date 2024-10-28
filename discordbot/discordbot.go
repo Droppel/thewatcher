@@ -28,6 +28,7 @@ type DiscordAction struct {
 type DiscordMessage struct {
 	Slot    int
 	Message string
+	Silent  bool
 }
 
 type DiscordChannelTopicEdit struct {
@@ -99,7 +100,14 @@ func InitBot() (chan DiscordAction, error) {
 				// Handle message
 				switch msg.Type {
 				case "message":
-					dg.ChannelMessageSend(slotsToChannels[msg.Message.Slot], msg.Message.Message)
+					var flags discordgo.MessageFlags = 0
+					if msg.Message.Silent {
+						flags = 4096
+					}
+					dg.ChannelMessageSendComplex(slotsToChannels[msg.Message.Slot], &discordgo.MessageSend{
+						Content: msg.Message.Message,
+						Flags:   flags,
+					})
 				case "channel_topic":
 					channel, err := dg.Channel(slotsToChannels[msg.ChannelTopicEdit.Slot])
 					if err != nil {
