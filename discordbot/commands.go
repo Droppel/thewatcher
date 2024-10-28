@@ -114,8 +114,44 @@ var (
 			})
 		},
 		"bkstatus": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-			reply := ""
+			bkGames := make(map[string]string)
+			softbkGames := make(map[string]string)
+			unblockedGames := make(map[string]string)
+			unknownGames := make(map[string]string)
+
 			for chName, topic := range currentGameStatus {
+				switch topic {
+				case "Game status: BK":
+					bkGames[chName] = topic
+				case "Game status: SoftBK":
+					softbkGames[chName] = topic
+				case "Game status: unblocked":
+					unblockedGames[chName] = topic
+				default:
+					unknownGames[chName] = topic
+				}
+			}
+
+			reply := "## Unknown games:\n"
+			for chName, topic := range unknownGames {
+				chReply := fmt.Sprintf("%s: %s\n", chName, topic)
+				reply += chReply
+			}
+
+			reply += "\n## Unblocked games:\n"
+			for chName, topic := range unblockedGames {
+				chReply := fmt.Sprintf("%s: %s\n", chName, topic)
+				reply += chReply
+			}
+
+			reply += "\n## SoftBK games:\n"
+			for chName, topic := range softbkGames {
+				chReply := fmt.Sprintf("%s: %s\n", chName, topic)
+				reply += chReply
+			}
+
+			reply += "\n## BK games:\n"
+			for chName, topic := range bkGames {
 				chReply := fmt.Sprintf("%s: %s\n", chName, topic)
 				reply += chReply
 			}
