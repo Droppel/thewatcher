@@ -117,7 +117,7 @@ func InitBot() (chan DiscordAction, error) {
 					if !strings.Contains(channel.Topic, "BK") {
 						continue
 					}
-					currentGameStatus[channel.Name] = "Game status: BK"
+					currentGameStatus[channel.Name] = msg.ChannelTopicEdit.Topic
 					dg.ChannelEdit(slotsToChannels[msg.ChannelTopicEdit.Slot], &discordgo.ChannelEdit{
 						Topic: msg.ChannelTopicEdit.Topic,
 					})
