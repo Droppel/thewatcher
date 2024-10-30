@@ -196,9 +196,11 @@ func HandleItemSend(result map[string]interface{}) {
 		return
 	}
 
-	if item.Flags != 1 {
+	if item.Flags == 0 || item.Flags == 4 { // Filler or Trap
 		return
 	}
+
+	isProgression := item.Flags == 1
 
 	recvPlayer := result["receiving"].(float64)
 	slotName := players[int(recvPlayer)].Name
@@ -208,6 +210,7 @@ func HandleItemSend(result map[string]interface{}) {
 		Message: discordbot.DiscordMessage{
 			Slot:    int(recvPlayer),
 			Message: discMsg,
+			Silent:  !isProgression, // Send silent messages for useful items
 		},
 	}
 
