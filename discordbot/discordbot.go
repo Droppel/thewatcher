@@ -193,9 +193,12 @@ func editStatusMessage() {
 		msgContent += chReply
 	}
 
-	if channel.MessageCount == 0 {
-		dg.ChannelMessageSend(channelID, msgContent)
-	} else {
-		channel.Messages[0].Content = msgContent
+	msgID := channel.LastMessageID
+	_, err = dg.ChannelMessageEdit(channelID, msgID, msgContent)
+	if err != nil {
+		if strings.Contains(err.Error(), "Unknown Message") {
+			dg.ChannelMessageSend(channelID, msgContent)
+		}
+		return
 	}
 }
