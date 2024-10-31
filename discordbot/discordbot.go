@@ -176,20 +176,20 @@ func editStatusMessage() {
 	}
 
 	msgContent += "\n## Unblocked games:\n"
-	for chName, topic := range unblockedGames {
-		chReply := fmt.Sprintf("%s: %s\n", chName, topic)
+	for chName := range unblockedGames {
+		chReply := fmt.Sprintf("%s\n", chName)
 		msgContent += chReply
 	}
 
 	msgContent += "\n## SoftBK games:\n"
-	for chName, topic := range softbkGames {
-		chReply := fmt.Sprintf("%s: %s\n", chName, topic)
+	for chName := range softbkGames {
+		chReply := fmt.Sprintf("%s\n", chName)
 		msgContent += chReply
 	}
 
 	msgContent += "\n## BK games:\n"
-	for chName, topic := range bkGames {
-		chReply := fmt.Sprintf("%s: %s\n", chName, topic)
+	for chName := range bkGames {
+		chReply := fmt.Sprintf("%s\n", chName)
 		msgContent += chReply
 	}
 
