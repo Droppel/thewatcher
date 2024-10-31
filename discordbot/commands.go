@@ -83,7 +83,7 @@ var (
 				return
 			}
 
-			currentGameStatus[channel.Name] = SOFTBK_STATUS
+			updateStatusMessage(channel.Name, SOFTBK_STATUS)
 			s.ChannelEdit(i.ChannelID, &discordgo.ChannelEdit{
 				Topic: SOFTBK_STATUS,
 			})
@@ -108,7 +108,7 @@ var (
 				return
 			}
 
-			currentGameStatus[channel.Name] = UNBLOCKED_STATUS
+			updateStatusMessage(channel.Name, UNBLOCKED_STATUS)
 			s.ChannelEdit(i.ChannelID, &discordgo.ChannelEdit{
 				Topic: UNBLOCKED_STATUS,
 			})
