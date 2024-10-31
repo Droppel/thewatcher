@@ -218,7 +218,7 @@ func HandleItemSend(result map[string]interface{}) {
 		Type: "channel_topic",
 		ChannelTopicEdit: discordbot.DiscordChannelTopicEdit{
 			Slot:  int(recvPlayer),
-			Topic: "Game status: ???",
+			Topic: discordbot.UNKNOWN_STATUS,
 		},
 	}
 }

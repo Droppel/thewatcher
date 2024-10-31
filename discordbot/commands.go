@@ -7,6 +7,13 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
+const (
+	BK_STATUS        = "Game status: BK"
+	SOFTBK_STATUS    = "Game status: SoftBK"
+	UNBLOCKED_STATUS = "Game status: unblocked"
+	UNKNOWN_STATUS   = "Game status: unknown"
+)
+
 var (
 	Commands = []*discordgo.ApplicationCommand{
 		{
@@ -41,9 +48,9 @@ var (
 				return
 			}
 
-			currentGameStatus[channel.Name] = "Game status: BK"
+			updateStatusMessage(channel.Name, BK_STATUS)
 			_, err = s.ChannelEdit(i.ChannelID, &discordgo.ChannelEdit{
-				Topic: "Game status: BK",
+				Topic: BK_STATUS,
 			})
 			if err != nil {
 				log.Println(err)
@@ -76,9 +83,9 @@ var (
 				return
 			}
 
-			currentGameStatus[channel.Name] = "Game status: SoftBK"
+			currentGameStatus[channel.Name] = SOFTBK_STATUS
 			s.ChannelEdit(i.ChannelID, &discordgo.ChannelEdit{
-				Topic: "Game status: SoftBK",
+				Topic: SOFTBK_STATUS,
 			})
 
 			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -101,9 +108,9 @@ var (
 				return
 			}
 
-			currentGameStatus[channel.Name] = "Game status: unblocked"
+			currentGameStatus[channel.Name] = UNBLOCKED_STATUS
 			s.ChannelEdit(i.ChannelID, &discordgo.ChannelEdit{
-				Topic: "Game status: unblocked",
+				Topic: UNBLOCKED_STATUS,
 			})
 
 			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -121,11 +128,11 @@ var (
 
 			for chName, topic := range currentGameStatus {
 				switch topic {
-				case "Game status: BK":
+				case BK_STATUS:
 					bkGames[chName] = topic
-				case "Game status: SoftBK":
+				case SOFTBK_STATUS:
 					softbkGames[chName] = topic
-				case "Game status: unblocked":
+				case UNBLOCKED_STATUS:
 					unblockedGames[chName] = topic
 				default:
 					unknownGames[chName] = topic

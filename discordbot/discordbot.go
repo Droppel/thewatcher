@@ -86,6 +86,7 @@ func InitBot() (chan DiscordAction, error) {
 		}
 		currentGameStatus[channel.Name] = channel.Topic
 	}
+	editStatusMessage()
 
 	// Wait here until CTRL-C or other term signal is received.
 	log.Info("Bot is now running.  Press CTRL-C to exit.")
@@ -117,7 +118,7 @@ func InitBot() (chan DiscordAction, error) {
 					if !strings.Contains(channel.Topic, "BK") {
 						continue
 					}
-					currentGameStatus[channel.Name] = msg.ChannelTopicEdit.Topic
+					updateStatusMessage(channel.Name, msg.ChannelTopicEdit.Topic)
 					dg.ChannelEdit(slotsToChannels[msg.ChannelTopicEdit.Slot], &discordgo.ChannelEdit{
 						Topic: msg.ChannelTopicEdit.Topic,
 					})
@@ -130,4 +131,71 @@ func InitBot() (chan DiscordAction, error) {
 	}()
 
 	return messageCh, err
+}
+
+func updateStatusMessage(gameName string, topic string) {
+	currentGameStatus[gameName] = topic
+	editStatusMessage()
+}
+
+func editStatusMessage() {
+	channelID, exists := os.LookupEnv("STATUS_CHANNEL")
+	if !exists {
+		log.Error("STATUS_CHANNEL not set")
+		return
+	}
+
+	channel, err := dg.Channel(channelID)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	bkGames := make(map[string]string)
+	softbkGames := make(map[string]string)
+	unblockedGames := make(map[string]string)
+	unknownGames := make(map[string]string)
+
+	for chName, topic := range currentGameStatus {
+		switch topic {
+		case BK_STATUS:
+			bkGames[chName] = topic
+		case SOFTBK_STATUS:
+			softbkGames[chName] = topic
+		case UNBLOCKED_STATUS:
+			unblockedGames[chName] = topic
+		default:
+			unknownGames[chName] = topic
+		}
+	}
+
+	msgContent := "## Unknown games:\n"
+	for chName, topic := range unknownGames {
+		chReply := fmt.Sprintf("%s: %s\n", chName, topic)
+		msgContent += chReply
+	}
+
+	msgContent += "\n## Unblocked games:\n"
+	for chName, topic := range unblockedGames {
+		chReply := fmt.Sprintf("%s: %s\n", chName, topic)
+		msgContent += chReply
+	}
+
+	msgContent += "\n## SoftBK games:\n"
+	for chName, topic := range softbkGames {
+		chReply := fmt.Sprintf("%s: %s\n", chName, topic)
+		msgContent += chReply
+	}
+
+	msgContent += "\n## BK games:\n"
+	for chName, topic := range bkGames {
+		chReply := fmt.Sprintf("%s: %s\n", chName, topic)
+		msgContent += chReply
+	}
+
+	if channel.MessageCount == 0 {
+		dg.ChannelMessageSend(channelID, msgContent)
+	} else {
+		channel.Messages[0].Content = msgContent
+	}
 }
