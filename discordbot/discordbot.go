@@ -170,8 +170,8 @@ func editStatusMessage() {
 	}
 
 	msgContent := "## Unknown games:\n"
-	for chName, topic := range unknownGames {
-		chReply := fmt.Sprintf("%s: %s\n", chName, topic)
+	for chName := range unknownGames {
+		chReply := fmt.Sprintf("%s\n", chName)
 		msgContent += chReply
 	}
 
