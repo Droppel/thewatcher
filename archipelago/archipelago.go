@@ -232,6 +232,10 @@ func HandleJoin(result map[string]interface{}) {
 		return
 	}
 
+	if slotName == "Factorio" { // Ignore Factorio
+		return
+	}
+
 	discMsg := fmt.Sprintf("%s joined", slotName)
 	discordMessageCh <- discordbot.DiscordAction{
 		Type: "message",
