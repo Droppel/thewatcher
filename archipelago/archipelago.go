@@ -203,6 +203,10 @@ func HandleItemSend(result map[string]interface{}) {
 	isProgression := item.Flags == 1
 
 	recvPlayer := result["receiving"].(float64)
+	if discordbot.CurrentGameStatus[players[int(recvPlayer)].Name] == discordbot.GOAL_STATUS {
+		return
+	}
+
 	slotName := players[int(recvPlayer)].Name
 	discMsg := fmt.Sprintf("%s received %s", slotName, IdMaps.Item_id_to_name[item.Item])
 	discordMessageCh <- discordbot.DiscordAction{

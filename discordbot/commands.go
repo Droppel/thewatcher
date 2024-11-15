@@ -1,7 +1,6 @@
 package discordbot
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/bwmarrin/discordgo"
@@ -12,6 +11,7 @@ const (
 	SOFTBK_STATUS    = "Game status: SoftBK"
 	UNBLOCKED_STATUS = "Game status: unblocked"
 	UNKNOWN_STATUS   = "Game status: unknown"
+	GOAL_STATUS      = "Game status: goaled 🥳"
 )
 
 var (
@@ -29,8 +29,8 @@ var (
 			Description: "Sets the game status to unblocked",
 		},
 		{
-			Name:        "bkstatus",
-			Description: "Replies with the current game status",
+			Name:        "goal",
+			Description: "Sets the game status to goaled",
 		},
 	}
 
@@ -120,54 +120,28 @@ var (
 				},
 			})
 		},
-		"bkstatus": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-			bkGames := make(map[string]string)
-			softbkGames := make(map[string]string)
-			unblockedGames := make(map[string]string)
-			unknownGames := make(map[string]string)
-
-			for chName, topic := range currentGameStatus {
-				switch topic {
-				case BK_STATUS:
-					bkGames[chName] = topic
-				case SOFTBK_STATUS:
-					softbkGames[chName] = topic
-				case UNBLOCKED_STATUS:
-					unblockedGames[chName] = topic
-				default:
-					unknownGames[chName] = topic
-				}
+		"goal": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+			channel, err := s.Channel(i.ChannelID)
+			if err != nil {
+				log.Println(err)
+				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Content: "Failed to get channel",
+					},
+				})
+				return
 			}
 
-			reply := "## Unknown games:\n"
-			for chName, topic := range unknownGames {
-				chReply := fmt.Sprintf("%s: %s\n", chName, topic)
-				reply += chReply
-			}
+			updateStatusMessage(channel.Name, GOAL_STATUS)
+			s.ChannelEdit(i.ChannelID, &discordgo.ChannelEdit{
+				Topic: GOAL_STATUS,
+			})
 
-			reply += "\n## Unblocked games:\n"
-			for chName, topic := range unblockedGames {
-				chReply := fmt.Sprintf("%s: %s\n", chName, topic)
-				reply += chReply
-			}
-
-			reply += "\n## SoftBK games:\n"
-			for chName, topic := range softbkGames {
-				chReply := fmt.Sprintf("%s: %s\n", chName, topic)
-				reply += chReply
-			}
-
-			reply += "\n## BK games:\n"
-			for chName, topic := range bkGames {
-				chReply := fmt.Sprintf("%s: %s\n", chName, topic)
-				reply += chReply
-			}
-
-			log.Println("Replying with:", reply)
 			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
-					Content: reply,
+					Content: "Game status set to goaled",
 				},
 			})
 		},

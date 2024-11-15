@@ -16,7 +16,7 @@ var (
 	dg              *discordgo.Session
 	slotsToChannels map[int]string
 
-	currentGameStatus map[string]string = make(map[string]string)
+	CurrentGameStatus map[string]string = make(map[string]string)
 )
 
 type DiscordAction struct {
@@ -84,7 +84,7 @@ func InitBot() (chan DiscordAction, error) {
 			log.Println(err)
 			continue
 		}
-		currentGameStatus[channel.Name] = channel.Topic
+		CurrentGameStatus[channel.Name] = channel.Topic
 	}
 	editStatusMessage()
 
@@ -134,7 +134,7 @@ func InitBot() (chan DiscordAction, error) {
 }
 
 func updateStatusMessage(gameName string, topic string) {
-	currentGameStatus[gameName] = topic
+	CurrentGameStatus[gameName] = topic
 	editStatusMessage()
 }
 
@@ -155,8 +155,9 @@ func editStatusMessage() {
 	softbkGames := make(map[string]string)
 	unblockedGames := make(map[string]string)
 	unknownGames := make(map[string]string)
+	goaledGames := make(map[string]string)
 
-	for chName, topic := range currentGameStatus {
+	for chName, topic := range CurrentGameStatus {
 		switch topic {
 		case BK_STATUS:
 			bkGames[chName] = topic
@@ -164,6 +165,8 @@ func editStatusMessage() {
 			softbkGames[chName] = topic
 		case UNBLOCKED_STATUS:
 			unblockedGames[chName] = topic
+		case GOAL_STATUS:
+			goaledGames[chName] = topic
 		default:
 			unknownGames[chName] = topic
 		}
@@ -189,6 +192,12 @@ func editStatusMessage() {
 
 	msgContent += "\n## BK games:\n"
 	for chName := range bkGames {
+		chReply := fmt.Sprintf("%s\n", chName)
+		msgContent += chReply
+	}
+
+	msgContent += "\n## Goaled games:\n"
+	for chName := range goaledGames {
 		chReply := fmt.Sprintf("%s\n", chName)
 		msgContent += chReply
 	}
