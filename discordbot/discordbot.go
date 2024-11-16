@@ -105,11 +105,20 @@ func InitBot() (chan DiscordAction, error) {
 					if msg.Message.Silent {
 						flags = 4096
 					}
+
+					if CurrentGameStatus[slotsToChannels[msg.Message.Slot]] == GOAL_STATUS {
+						continue
+					}
+
 					dg.ChannelMessageSendComplex(slotsToChannels[msg.Message.Slot], &discordgo.MessageSend{
 						Content: msg.Message.Message,
 						Flags:   flags,
 					})
 				case "channel_topic":
+					if CurrentGameStatus[slotsToChannels[msg.Message.Slot]] == GOAL_STATUS {
+						continue
+					}
+
 					channel, err := dg.Channel(slotsToChannels[msg.ChannelTopicEdit.Slot])
 					if err != nil {
 						log.Errorf("Cannot get channel: %v", err)
