@@ -128,9 +128,12 @@ func InitBot() (chan DiscordAction, error) {
 						continue
 					}
 					updateStatusMessage(channel.Name, msg.ChannelTopicEdit.Topic)
-					dg.ChannelEdit(slotsToChannels[msg.ChannelTopicEdit.Slot], &discordgo.ChannelEdit{
+					_, err = dg.ChannelEdit(slotsToChannels[msg.ChannelTopicEdit.Slot], &discordgo.ChannelEdit{
 						Topic: msg.ChannelTopicEdit.Topic,
 					})
+					if err != nil {
+						log.Errorf("Cannot edit channel: %v", err)
+					}
 				}
 			case <-sc:
 				dg.Close()
@@ -217,6 +220,7 @@ func editStatusMessage() {
 		if strings.Contains(err.Error(), "Unknown Message") {
 			dg.ChannelMessageSend(channelID, msgContent)
 		}
+		log.Error(err)
 		return
 	}
 }
