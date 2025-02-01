@@ -109,9 +109,19 @@ var (
 			}
 
 			updateStatusMessage(channel.Name, UNBLOCKED_STATUS)
-			s.ChannelEdit(i.ChannelID, &discordgo.ChannelEdit{
+			_, err = s.ChannelEdit(i.ChannelID, &discordgo.ChannelEdit{
 				Topic: UNBLOCKED_STATUS,
 			})
+			if err != nil {
+				log.Println(err)
+				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Content: "Failed to set game status to unblocked",
+					},
+				})
+				return
+			}
 
 			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
