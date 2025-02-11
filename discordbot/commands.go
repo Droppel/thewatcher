@@ -95,8 +95,11 @@ func updateStatusCommand(s *discordgo.Session, i *discordgo.InteractionCreate, s
 
 	gameName := datastorage.SlotNumbersToAPSlots[channelsToSlots[i.ChannelID]].Name
 	gameNameSplit := strings.Split(gameName, "_")
-	gameName = gameNameSplit[0] // Remove the slot number
-	maxSlot, _ := strconv.Atoi(gameNameSplit[1])
+	maxSlot := 1
+	if len(gameNameSplit) >= 2 { // special case for MLSS because that one is missing the _1 in the name so we only do this for slots with a number
+		gameName = gameNameSplit[0] // Remove the slot number
+		maxSlot, _ = strconv.Atoi(gameNameSplit[1])
+	}
 	if slotIndex < 1 {
 		slotIndex = 1
 	}
