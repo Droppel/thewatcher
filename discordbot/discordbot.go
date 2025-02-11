@@ -147,32 +147,29 @@ func InitBotAfterAPConnect() error {
 	}
 
 	statusMsg, err := dg.ChannelMessage(statusMessageChannelID, statusMessageID)
-	if err != nil {
-		log.Error(err)
-		return err
-	}
-
-	currentStatus := BK_STATUS
-	for _, msg := range strings.Split(statusMsg.Content, "\n") {
-		if len(msg) == 0 {
-			continue
-		}
-		if strings.Contains(msg, "##") {
-			switch msg {
-			case "## Unknown games:":
-				currentStatus = UNKNOWN_STATUS
-			case "## Unblocked games:":
-				currentStatus = UNBLOCKED_STATUS
-			case "## SoftBK games:":
-				currentStatus = SOFTBK_STATUS
-			case "## BK games:":
-				currentStatus = BK_STATUS
-			case "## Goaled games:":
-				currentStatus = GOAL_STATUS
+	if err == nil {
+		currentStatus := BK_STATUS
+		for _, msg := range strings.Split(statusMsg.Content, "\n") {
+			if len(msg) == 0 {
+				continue
 			}
-			continue
+			if strings.Contains(msg, "##") {
+				switch msg {
+				case "## Unknown games:":
+					currentStatus = UNKNOWN_STATUS
+				case "## Unblocked games:":
+					currentStatus = UNBLOCKED_STATUS
+				case "## SoftBK games:":
+					currentStatus = SOFTBK_STATUS
+				case "## BK games:":
+					currentStatus = BK_STATUS
+				case "## Goaled games:":
+					currentStatus = GOAL_STATUS
+				}
+				continue
+			}
+			CurrentGameStatus[msg] = currentStatus
 		}
-		CurrentGameStatus[msg] = currentStatus
 	}
 	err = editStatusMessage()
 	if err != nil {

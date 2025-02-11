@@ -3,6 +3,7 @@ package discordbot
 import (
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
 	"watcher/datastorage"
 
@@ -93,8 +94,17 @@ func updateStatusCommand(s *discordgo.Session, i *discordgo.InteractionCreate, s
 	}
 
 	gameName := datastorage.SlotNumbersToAPSlots[channelsToSlots[i.ChannelID]].Name
-	gameName = strings.Split(gameName, "_")[0] // Remove the slot number
-	gameName = fmt.Sprintf("%s%d", gameName, slotIndex)
+	gameNameSplit := strings.Split(gameName, "_")
+	gameName = gameNameSplit[0] // Remove the slot number
+	maxSlot, _ := strconv.Atoi(gameNameSplit[1])
+	if slotIndex < 1 {
+		slotIndex = 1
+	}
+	if slotIndex > int64(maxSlot) {
+		slotIndex = int64(maxSlot)
+	}
+
+	gameName = fmt.Sprintf("%s_%d", gameName, slotIndex)
 
 	err := updateStatus(gameName, status)
 	if err != nil {
