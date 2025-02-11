@@ -1,7 +1,10 @@
 package discordbot
 
 import (
+	"fmt"
 	"log"
+	"strings"
+	"watcher/datastorage"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -19,144 +22,99 @@ var (
 		{
 			Name:        "bk",
 			Description: "Sets the game status to BK",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionInteger,
+					Name:        "slot_number",
+					Description: "Number of the slot",
+					Required:    false,
+				},
+			},
 		},
 		{
 			Name:        "softbk",
 			Description: "Sets the game status to SoftBK",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionInteger,
+					Name:        "slot_number",
+					Description: "Number of the slot",
+					Required:    false,
+				},
+			},
 		},
 		{
 			Name:        "unblocked",
 			Description: "Sets the game status to unblocked",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionInteger,
+					Name:        "slot_number",
+					Description: "Number of the slot",
+					Required:    false,
+				},
+			},
 		},
 		{
 			Name:        "goal",
 			Description: "Sets the game status to goaled",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionInteger,
+					Name:        "slot_number",
+					Description: "Number of the slot",
+					Required:    false,
+				},
+			},
 		},
 	}
 
 	CommandHandlers = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
 		"bk": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-			channel, err := s.Channel(i.ChannelID)
-			if err != nil {
-				log.Println(err)
-				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-					Type: discordgo.InteractionResponseChannelMessageWithSource,
-					Data: &discordgo.InteractionResponseData{
-						Content: "Failed to get channel",
-					},
-				})
-				return
-			}
-
-			updateStatusMessage(channel.Name, BK_STATUS)
-			_, err = s.ChannelEdit(i.ChannelID, &discordgo.ChannelEdit{
-				Topic: BK_STATUS,
-			})
-			if err != nil {
-				log.Println(err)
-				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-					Type: discordgo.InteractionResponseChannelMessageWithSource,
-					Data: &discordgo.InteractionResponseData{
-						Content: "Failed to set game status to BK",
-					},
-				})
-				return
-			}
-
-			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Content: "Game status set to BK",
-				},
-			})
+			updateStatusCommand(s, i, BK_STATUS)
 		},
 		"softbk": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-			channel, err := s.Channel(i.ChannelID)
-			if err != nil {
-				log.Println(err)
-				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-					Type: discordgo.InteractionResponseChannelMessageWithSource,
-					Data: &discordgo.InteractionResponseData{
-						Content: "Failed to get channel",
-					},
-				})
-				return
-			}
-
-			updateStatusMessage(channel.Name, SOFTBK_STATUS)
-			s.ChannelEdit(i.ChannelID, &discordgo.ChannelEdit{
-				Topic: SOFTBK_STATUS,
-			})
-
-			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Content: "Game status set to SoftBK",
-				},
-			})
+			updateStatusCommand(s, i, SOFTBK_STATUS)
 		},
 		"unblocked": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-			channel, err := s.Channel(i.ChannelID)
-			if err != nil {
-				log.Println(err)
-				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-					Type: discordgo.InteractionResponseChannelMessageWithSource,
-					Data: &discordgo.InteractionResponseData{
-						Content: "Failed to get channel",
-					},
-				})
-				return
-			}
-
-			updateStatusMessage(channel.Name, UNBLOCKED_STATUS)
-			_, err = s.ChannelEdit(i.ChannelID, &discordgo.ChannelEdit{
-				Topic: UNBLOCKED_STATUS,
-			})
-			if err != nil {
-				log.Println(err)
-				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-					Type: discordgo.InteractionResponseChannelMessageWithSource,
-					Data: &discordgo.InteractionResponseData{
-						Content: "Failed to set game status to unblocked",
-					},
-				})
-				return
-			}
-
-			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Content: "Game status set to unblocked",
-				},
-			})
+			updateStatusCommand(s, i, UNBLOCKED_STATUS)
 		},
 		"goal": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-			channel, err := s.Channel(i.ChannelID)
-			if err != nil {
-				log.Println(err)
-				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-					Type: discordgo.InteractionResponseChannelMessageWithSource,
-					Data: &discordgo.InteractionResponseData{
-						Content: "Failed to get channel",
-					},
-				})
-				return
-			}
-
-			updateStatusMessage(channel.Name, GOAL_STATUS)
-			s.ChannelEdit(i.ChannelID, &discordgo.ChannelEdit{
-				Topic: GOAL_STATUS,
-			})
-
-			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Content: "Game status set to goaled",
-				},
-			})
+			updateStatusCommand(s, i, GOAL_STATUS)
 		},
 	}
 )
+
+func updateStatusCommand(s *discordgo.Session, i *discordgo.InteractionCreate, status string) {
+	options := i.ApplicationCommandData().Options
+	var slotIndex int64 = 1
+	if len(options) > 0 {
+		slotIndex = options[0].IntValue()
+	}
+
+	gameName := datastorage.SlotNumbersToAPSlots[channelsToSlots[i.ChannelID]].Name
+	gameName = strings.Split(gameName, "_")[0] // Remove the slot number
+	gameName = fmt.Sprintf("%s%d", gameName, slotIndex)
+
+	err := updateStatus(gameName, status)
+	if err != nil {
+		log.Println(err)
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: fmt.Sprintf("Failed to set game status to %s", status),
+			},
+		})
+		return
+	}
+
+	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Content: fmt.Sprintf("Game status set to %s", status),
+		},
+	})
+}
 
 func init() {
 }

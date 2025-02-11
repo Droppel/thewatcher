@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"watcher/datastorage"
 	"watcher/discordbot"
 
 	"github.com/google/uuid"
@@ -62,14 +63,8 @@ type ConnectPacket struct {
 	Slot_data      bool     `json:"slot_data"`
 }
 
-type Player struct {
-	Slot int    `json:"slot"`
-	Name string `json:"name"`
-}
-
 var roomInfo RoomInfo
 var IdMaps IdMap
-var players map[int]Player
 var discordMessageCh chan discordbot.DiscordAction
 
 func Connect(discMessageCh chan discordbot.DiscordAction) {
@@ -118,16 +113,16 @@ func Connect(discMessageCh chan discordbot.DiscordAction) {
 
 					sender <- connectPacketBytes
 				case "Connected":
-					players = make(map[int]Player, 0)
+					datastorage.SlotNumbersToAPSlots = make(map[int]datastorage.Player, 0)
 					playerdata := message["players"].([]interface{})
 					for _, player := range playerdata {
-						var playerData Player
+						var playerData datastorage.Player
 						err = mapstructure.Decode(player, &playerData)
 						if err != nil {
 							log.Println("json:", err)
 							return
 						}
-						players[playerData.Slot] = playerData
+						datastorage.SlotNumbersToAPSlots[playerData.Slot] = playerData
 					}
 					games := strings.Join(roomInfo.Games, `","`)
 					sender <- []byte(fmt.Sprintf(`[{"cmd":"GetDataPackage","games":["%s"]}]`, games))
@@ -150,6 +145,12 @@ func Connect(discMessageCh chan discordbot.DiscordAction) {
 						for name, id := range gameData.Location_name_to_id {
 							IdMaps.Location_id_to_name[id] = name
 						}
+					}
+
+					err = discordbot.InitBotAfterAPConnect()
+					if err != nil {
+						log.Println("error getting status for bot:", err)
+						return
 					}
 				case "PrintJSON":
 					HandlePrintJson(messageBytes)
@@ -203,7 +204,7 @@ func HandleItemSend(result map[string]interface{}) {
 	isProgression := item.Flags == 1
 
 	recvPlayer := result["receiving"].(float64)
-	slotName := players[int(recvPlayer)].Name
+	slotName := datastorage.SlotNumbersToAPSlots[int(recvPlayer)].Name
 	discMsg := fmt.Sprintf("%s received %s", slotName, IdMaps.Item_id_to_name[item.Item])
 	discordMessageCh <- discordbot.DiscordAction{
 		Type: "message",
@@ -215,17 +216,18 @@ func HandleItemSend(result map[string]interface{}) {
 	}
 
 	discordMessageCh <- discordbot.DiscordAction{
-		Type: "channel_topic",
-		ChannelTopicEdit: discordbot.DiscordChannelTopicEdit{
-			Slot:  int(recvPlayer),
-			Topic: discordbot.UNKNOWN_STATUS,
+		Type: "status_change",
+		StatusChange: discordbot.DiscordStatusChange{
+			Slot:   int(recvPlayer),
+			Name:   slotName,
+			Status: discordbot.UNKNOWN_STATUS,
 		},
 	}
 }
 
 func HandleJoin(result map[string]interface{}) {
 	slot := result["slot"].(float64)
-	slotName := players[int(slot)].Name
+	slotName := datastorage.SlotNumbersToAPSlots[int(slot)].Name
 	text := result["data"].([]interface{})[0].(map[string]interface{})["text"].(string)
 
 	if isTextOnly(text) {
@@ -249,7 +251,7 @@ func HandleJoin(result map[string]interface{}) {
 
 func HandlePart(result map[string]interface{}) {
 	slot := result["slot"].(float64)
-	slotName := players[int(slot)].Name
+	slotName := datastorage.SlotNumbersToAPSlots[int(slot)].Name
 	text := result["data"].([]interface{})[0].(map[string]interface{})["text"].(string)
 
 	if isTextOnly(text) {

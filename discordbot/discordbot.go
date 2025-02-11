@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"slices"
 	"strconv"
 	"strings"
 	"syscall"
+	"watcher/datastorage"
 
 	"github.com/bwmarrin/discordgo"
 	log "github.com/sirupsen/logrus"
@@ -15,14 +17,20 @@ import (
 var (
 	dg              *discordgo.Session
 	slotsToChannels map[int]string
+	// Because we have a 1 to N relation between channels and slots, this map is not complete, it doesn't matter though, because we only care
+	// about any slot name and strip the number anyways
+	channelsToSlots map[string]int
+
+	statusMessageChannelID string
+	statusMessageID        string
 
 	CurrentGameStatus map[string]string = make(map[string]string)
 )
 
 type DiscordAction struct {
-	Type             string
-	Message          DiscordMessage
-	ChannelTopicEdit DiscordChannelTopicEdit
+	Type         string
+	Message      DiscordMessage
+	StatusChange DiscordStatusChange
 }
 
 type DiscordMessage struct {
@@ -31,22 +39,15 @@ type DiscordMessage struct {
 	Silent  bool
 }
 
-type DiscordChannelTopicEdit struct {
-	Slot  int
-	Topic string
+type DiscordStatusChange struct {
+	Name   string
+	Slot   int
+	Status string
 }
 
 func InitBot() (chan DiscordAction, error) {
 	var err error
 	authtoken := os.Getenv("AUTH_TOKEN")
-
-	slotsToChannelsEnv := os.Getenv("SLOTS_TO_CHANNELS")
-	slotsToChannels = make(map[int]string)
-	for _, slotToChannel := range strings.Split(slotsToChannelsEnv, ",") {
-		slotToChannelSplit := strings.Split(slotToChannel, ":")
-		number, _ := strconv.Atoi(slotToChannelSplit[0])
-		slotsToChannels[number] = slotToChannelSplit[1]
-	}
 
 	// Create a new Discord session using the provided bot token.
 	dg, err = discordgo.New("Bot " + string(authtoken))
@@ -78,15 +79,11 @@ func InitBot() (chan DiscordAction, error) {
 		fmt.Printf("Added command: %s\n", v.Name)
 	}
 
-	for _, chID := range slotsToChannels {
-		channel, err := dg.Channel(chID)
-		if err != nil {
-			log.Println(err)
-			continue
-		}
-		CurrentGameStatus[channel.Name] = channel.Topic
+	statusMessageChannelID, statusMessageID, err = getStatusMessage()
+	if err != nil {
+		log.Error(err)
+		return nil, err
 	}
-	editStatusMessage()
 
 	// Wait here until CTRL-C or other term signal is received.
 	log.Info("Bot is now running.  Press CTRL-C to exit.")
@@ -106,7 +103,7 @@ func InitBot() (chan DiscordAction, error) {
 						flags = 4096
 					}
 
-					if CurrentGameStatus[slotsToChannels[msg.Message.Slot]] == GOAL_STATUS {
+					if CurrentGameStatus[datastorage.SlotNumbersToAPSlots[msg.Message.Slot].Name] == GOAL_STATUS {
 						continue
 					}
 
@@ -114,23 +111,14 @@ func InitBot() (chan DiscordAction, error) {
 						Content: msg.Message.Message,
 						Flags:   flags,
 					})
-				case "channel_topic":
-					if CurrentGameStatus[slotsToChannels[msg.Message.Slot]] == GOAL_STATUS {
+				case "status_change":
+					skip_status := []string{GOAL_STATUS, UNKNOWN_STATUS, UNBLOCKED_STATUS}
+
+					if slices.Contains[[]string, string](skip_status, CurrentGameStatus[datastorage.SlotNumbersToAPSlots[msg.Message.Slot].Name]) {
 						continue
 					}
 
-					channel, err := dg.Channel(slotsToChannels[msg.ChannelTopicEdit.Slot])
-					if err != nil {
-						log.Errorf("Cannot get channel: %v", err)
-						continue
-					}
-					if !strings.Contains(channel.Topic, "BK") {
-						continue
-					}
-					updateStatusMessage(channel.Name, msg.ChannelTopicEdit.Topic)
-					_, err = dg.ChannelEdit(slotsToChannels[msg.ChannelTopicEdit.Slot], &discordgo.ChannelEdit{
-						Topic: msg.ChannelTopicEdit.Topic,
-					})
+					err = updateStatus(msg.StatusChange.Name, msg.StatusChange.Status)
 					if err != nil {
 						log.Errorf("Cannot edit channel: %v", err)
 					}
@@ -145,22 +133,82 @@ func InitBot() (chan DiscordAction, error) {
 	return messageCh, err
 }
 
-func updateStatusMessage(gameName string, topic string) {
-	CurrentGameStatus[gameName] = topic
-	editStatusMessage()
+func InitBotAfterAPConnect() error {
+
+	slotsToChannelsEnv := os.Getenv("SLOTS_TO_CHANNELS")
+	slotsToChannels = make(map[int]string)
+
+	for _, slotToChannel := range strings.Split(slotsToChannelsEnv, ",") {
+		slotToChannelSplit := strings.Split(slotToChannel, ":")
+		number, _ := strconv.Atoi(slotToChannelSplit[0])
+		slotsToChannels[number] = slotToChannelSplit[1]
+		channelsToSlots[slotToChannelSplit[1]] = number
+	}
+
+	statusMsg, err := dg.ChannelMessage(statusMessageChannelID, statusMessageID)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+
+	currentStatus := BK_STATUS
+	for _, msg := range strings.Split(statusMsg.Content, "\n") {
+		if len(msg) == 0 {
+			continue
+		}
+		if strings.Contains(msg, "##") {
+			switch msg {
+			case "## Unknown games:":
+				currentStatus = UNKNOWN_STATUS
+			case "## Unblocked games:":
+				currentStatus = UNBLOCKED_STATUS
+			case "## SoftBK games:":
+				currentStatus = SOFTBK_STATUS
+			case "## BK games:":
+				currentStatus = BK_STATUS
+			case "## Goaled games:":
+				currentStatus = GOAL_STATUS
+			}
+			continue
+		}
+		CurrentGameStatus[msg] = currentStatus
+	}
+	err = editStatusMessage()
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	return nil
 }
 
-func editStatusMessage() {
+func updateStatus(name string, newStatus string) error {
+	if status, exists := CurrentGameStatus[name]; exists {
+		if status == newStatus {
+			return nil
+		}
+	}
+	CurrentGameStatus[name] = newStatus
+	return editStatusMessage()
+}
+
+func getStatusMessage() (string, string, error) {
 	channelID, exists := os.LookupEnv("STATUS_CHANNEL")
 	if !exists {
-		log.Error("STATUS_CHANNEL not set")
-		return
+		return "", "", fmt.Errorf("STATUS_CHANNEL not set")
 	}
 
 	channel, err := dg.Channel(channelID)
 	if err != nil {
-		log.Println(err)
-		return
+		return "", "", err
+	}
+
+	return channel.ID, channel.LastMessageID, nil
+}
+
+func editStatusMessage() error {
+	channelID, statusMsgID, err := getStatusMessage()
+	if err != nil {
+		return err
 	}
 
 	bkGames := make(map[string]string)
@@ -169,58 +217,61 @@ func editStatusMessage() {
 	unknownGames := make(map[string]string)
 	goaledGames := make(map[string]string)
 
-	for chName, topic := range CurrentGameStatus {
-		switch topic {
+	for name, status := range CurrentGameStatus {
+		switch status {
 		case BK_STATUS:
-			bkGames[chName] = topic
+			bkGames[name] = status
 		case SOFTBK_STATUS:
-			softbkGames[chName] = topic
+			softbkGames[name] = status
 		case UNBLOCKED_STATUS:
-			unblockedGames[chName] = topic
+			unblockedGames[name] = status
 		case GOAL_STATUS:
-			goaledGames[chName] = topic
+			goaledGames[name] = status
 		default:
-			unknownGames[chName] = topic
+			unknownGames[name] = status
 		}
 	}
 
 	msgContent := "## Unknown games:\n"
-	for chName := range unknownGames {
-		chReply := fmt.Sprintf("%s\n", chName)
+	for name := range unknownGames {
+		chReply := fmt.Sprintf("%s\n", name)
 		msgContent += chReply
 	}
 
 	msgContent += "\n## Unblocked games:\n"
-	for chName := range unblockedGames {
-		chReply := fmt.Sprintf("%s\n", chName)
+	for name := range unblockedGames {
+		chReply := fmt.Sprintf("%s\n", name)
 		msgContent += chReply
 	}
 
 	msgContent += "\n## SoftBK games:\n"
-	for chName := range softbkGames {
-		chReply := fmt.Sprintf("%s\n", chName)
+	for name := range softbkGames {
+		chReply := fmt.Sprintf("%s\n", name)
 		msgContent += chReply
 	}
 
 	msgContent += "\n## BK games:\n"
-	for chName := range bkGames {
-		chReply := fmt.Sprintf("%s\n", chName)
+	for name := range bkGames {
+		chReply := fmt.Sprintf("%s\n", name)
 		msgContent += chReply
 	}
 
 	msgContent += "\n## Goaled games:\n"
-	for chName := range goaledGames {
-		chReply := fmt.Sprintf("%s\n", chName)
+	for name := range goaledGames {
+		chReply := fmt.Sprintf("%s\n", name)
 		msgContent += chReply
 	}
 
-	msgID := channel.LastMessageID
-	_, err = dg.ChannelMessageEdit(channelID, msgID, msgContent)
+	_, err = dg.ChannelMessageEdit(channelID, statusMsgID, msgContent)
 	if err != nil {
 		if strings.Contains(err.Error(), "Unknown Message") {
-			dg.ChannelMessageSend(channelID, msgContent)
+			_, err = dg.ChannelMessageSend(channelID, msgContent)
+			if err != nil {
+				return err
+			}
+			return nil
 		}
-		log.Error(err)
-		return
+		return err
 	}
+	return nil
 }
