@@ -209,53 +209,59 @@ func editStatusMessage() error {
 		return err
 	}
 
-	bkGames := make(map[string]string)
-	softbkGames := make(map[string]string)
-	unblockedGames := make(map[string]string)
-	unknownGames := make(map[string]string)
-	goaledGames := make(map[string]string)
+	bkGames := make([]string, 0)
+	softbkGames := make([]string, 0)
+	unblockedGames := make([]string, 0)
+	unknownGames := make([]string, 0)
+	goaledGames := make([]string, 0)
 
 	for name, status := range CurrentGameStatus {
 		switch status {
 		case BK_STATUS:
-			bkGames[name] = status
+			bkGames = append(bkGames, name)
 		case SOFTBK_STATUS:
-			softbkGames[name] = status
+			softbkGames = append(softbkGames, name)
 		case UNBLOCKED_STATUS:
-			unblockedGames[name] = status
+			unblockedGames = append(unblockedGames, name)
 		case GOAL_STATUS:
-			goaledGames[name] = status
+			goaledGames = append(goaledGames, name)
 		default:
-			unknownGames[name] = status
+			unknownGames = append(unknownGames, name)
 		}
 	}
 
+	slices.Sort(bkGames)
+	slices.Sort(softbkGames)
+	slices.Sort(unblockedGames)
+	slices.Sort(unknownGames)
+	slices.Sort(goaledGames)
+
 	msgContent := "## Unknown games:\n"
-	for name := range unknownGames {
+	for _, name := range unknownGames {
 		chReply := fmt.Sprintf("%s\n", name)
 		msgContent += chReply
 	}
 
 	msgContent += "\n## Unblocked games:\n"
-	for name := range unblockedGames {
+	for _, name := range unblockedGames {
 		chReply := fmt.Sprintf("%s\n", name)
 		msgContent += chReply
 	}
 
 	msgContent += "\n## SoftBK games:\n"
-	for name := range softbkGames {
+	for _, name := range softbkGames {
 		chReply := fmt.Sprintf("%s\n", name)
 		msgContent += chReply
 	}
 
 	msgContent += "\n## BK games:\n"
-	for name := range bkGames {
+	for _, name := range bkGames {
 		chReply := fmt.Sprintf("%s\n", name)
 		msgContent += chReply
 	}
 
 	msgContent += "\n## Goaled games:\n"
-	for name := range goaledGames {
+	for _, name := range goaledGames {
 		chReply := fmt.Sprintf("%s\n", name)
 		msgContent += chReply
 	}
