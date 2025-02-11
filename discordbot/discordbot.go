@@ -137,6 +137,7 @@ func InitBotAfterAPConnect() error {
 
 	slotsToChannelsEnv := os.Getenv("SLOTS_TO_CHANNELS")
 	slotsToChannels = make(map[int]string)
+	channelsToSlots = make(map[string]int)
 
 	for _, slotToChannel := range strings.Split(slotsToChannelsEnv, ",") {
 		slotToChannelSplit := strings.Split(slotToChannel, ":")
