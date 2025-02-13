@@ -115,7 +115,7 @@ func updateStatusCommand(s *discordgo.Session, i *discordgo.InteractionCreate, s
 		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
-				Content: fmt.Sprintf("Failed to set game status to %s", status),
+				Content: fmt.Sprintf("Failed to set game status to %s for %s", status, gameName),
 			},
 		})
 		return
@@ -124,7 +124,7 @@ func updateStatusCommand(s *discordgo.Session, i *discordgo.InteractionCreate, s
 	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
-			Content: fmt.Sprintf("Game status set to %s", status),
+			Content: fmt.Sprintf("Game status set to %s for %s", status, gameName),
 		},
 	})
 }
