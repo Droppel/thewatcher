@@ -112,9 +112,8 @@ func InitBot() (chan DiscordAction, error) {
 						Flags:   flags,
 					})
 				case "status_change":
-					skip_status := []string{GOAL_STATUS, UNKNOWN_STATUS, UNBLOCKED_STATUS}
-
-					if slices.Contains[[]string, string](skip_status, CurrentGameStatus[datastorage.SlotNumbersToAPSlots[msg.Message.Slot].Name]) {
+					currentStatus := CurrentGameStatus[msg.StatusChange.Name]
+					if currentStatus == GOAL_STATUS || currentStatus == UNKNOWN_STATUS || currentStatus == UNBLOCKED_STATUS {
 						continue
 					}
 
