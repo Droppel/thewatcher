@@ -234,7 +234,7 @@ func HandleJoin(result map[string]interface{}) {
 		return
 	}
 
-	if slotName == "Factorio" { // Ignore Factorio
+	if slotName == "Factorio_1" { // Ignore Factorio
 		return
 	}
 
