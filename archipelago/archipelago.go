@@ -215,7 +215,7 @@ func HandleItemSend(result map[string]interface{}) {
 		},
 	}
 
-	if item.Flags == 0 {
+	if item.Flags != 1 {
 		return
 	}
 
