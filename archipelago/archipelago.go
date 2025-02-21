@@ -215,6 +215,10 @@ func HandleItemSend(result map[string]interface{}) {
 		},
 	}
 
+	if item.Flags == 0 {
+		return
+	}
+
 	discordMessageCh <- discordbot.DiscordAction{
 		Type: "status_change",
 		StatusChange: discordbot.DiscordStatusChange{
