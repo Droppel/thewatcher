@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 	"watcher/datastorage"
 
 	"github.com/bwmarrin/discordgo"
@@ -93,6 +94,7 @@ func InitBot() (chan DiscordAction, error) {
 
 	go func() {
 		for {
+			time.Sleep(200 * time.Millisecond)
 			select {
 			case msg := <-messageCh:
 				// Handle message
